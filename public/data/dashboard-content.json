@@ -1,0 +1,190 @@
+{
+  "topBar": {
+    "eyebrow": "recurring meeting audit",
+    "title": "Team calendar footprint",
+    "badge": "Weekly load"
+  },
+  "sidebar": {
+    "badge": "Meeting Audit",
+    "eyebrow": "Operations snapshot",
+    "title": "Weekly meeting audit",
+    "signals": {
+      "weeklyCost": {
+        "label": "Estimated weekly cost",
+        "tooltip": "Estimated weekly cost of recurring meeting time using total attendee-hours multiplied by $100 per person-hour.",
+        "detail": "Based on $100 per person-hour of recurring meeting time"
+      },
+      "topClientLoad": {
+        "label": "Top client load",
+        "tooltip": "The client account with the highest weekly attendee-minute footprint in the recurring meeting set.",
+        "detail": "Weighted attendee-minutes assigned to the top client account"
+      },
+      "sourceNotes": {
+        "label": "Source notes",
+        "tooltip": "Count of meetings carrying source notes or parser-generated notes that add audit context.",
+        "detail": "Entries need review or context"
+      }
+    }
+  },
+  "hero": {
+    "eyebrow": "Recurring meeting audit",
+    "title": "See where team time gets spent.",
+    "description": "This report turns recurring meetings into weekly load so you can see which calendars carry the most time, when the workweek is most congested, and what the recurring meeting footprint costs the team.",
+    "primaryAction": {
+      "label": "Inspect the heat map",
+      "href": "#schedule"
+    },
+    "secondaryAction": {
+      "label": "Open the meeting directory",
+      "href": "#directory"
+    },
+    "summaryLabel": "Total time spent in meetings",
+    "summaryTooltip": "Total attendee-hours per week across the recurring meeting set, adjusted for duration, attendee count, cadence, and listed weekdays.",
+    "chips": {
+      "busiestDay": {
+        "label": "Busiest day",
+        "tooltip": "The weekday with the highest total attendee-minute concentration across the visible workday heat map buckets."
+      },
+      "weeklyCost": {
+        "label": "Est. weekly cost",
+        "tooltip": "Estimated weekly cost of recurring meeting time using total attendee-hours multiplied by $100 per person-hour."
+      },
+      "mostExpensiveClient": {
+        "label": "Most expensive client",
+        "tooltip": "The client account with the highest recurring attendee-hour cost footprint, using the same $100 per person-hour assumption."
+      }
+    }
+  },
+  "entityColors": {
+    "clients": {
+      "Internal": "#7d8aa3",
+      "InRule": "#4f7cff",
+      "Alden": "#e59a3b",
+      "City of Birmingham": "#2bb6a3",
+      "CoB": "#2bb6a3",
+      "Credex": "#c96bdb"
+    },
+    "people": {
+      "Luke Colburn": "#e36f5d",
+      "Luke": "#e36f5d",
+      "Carter": "#d2a02e",
+      "Chris Sims": "#4f7cff",
+      "Chris S.": "#4f7cff",
+      "Chris B": "#d169c7",
+      "Rich": "#b76bd6",
+      "Brandon": "#3fb69a",
+      "Matthew Haikala": "#f08c3c",
+      "Matt": "#f08c3c",
+      "Katelyn": "#49bca8",
+      "Ross": "#c9872a",
+      "McCaul": "#5bb0ff",
+      "Corey": "#8f9ae6"
+    }
+  },
+  "widgetOrder": [
+    "overview",
+    "schedule",
+    "ownerLoad",
+    "personLoad",
+    "portfolio",
+    "qualityNotes",
+    "clientLoad",
+    "directory"
+  ],
+  "widgets": {
+    "overview": {
+      "id": "overview",
+      "anchorId": "overview",
+      "title": "Overview",
+      "description": "Core metrics derived from the recurring meeting set.",
+      "tooltip": "A rollup of the highest-level recurring meeting metrics used to orient the rest of the dashboard.",
+      "colSpan": "full"
+    },
+    "schedule": {
+      "id": "schedule",
+      "anchorId": "schedule",
+      "title": "Weekly meeting concentration",
+      "description": "Recurring attendee load by weekday and 2-hour workday block.",
+      "tooltip": "Read each cell as meetings that start in that weekday and 2-hour block. The cell value is weekly attendee-hours, not meeting count alone.",
+      "colSpan": "full"
+    },
+    "ownerLoad": {
+      "id": "ownerLoad",
+      "anchorId": "summary-detail",
+      "title": "What stands out",
+      "description": "Select a summary on the right to see the meetings behind it.",
+      "tooltip": "The right column highlights a few high-signal patterns. Selecting one updates the meeting table on the left.",
+      "colSpan": "full"
+    },
+    "workloadSummary": {
+      "id": "workloadSummary",
+      "title": "What stands out",
+      "description": "High-signal patterns that explain why the meeting footprint looks the way it does.",
+      "tooltip": "A compact summary of meeting frequency, duration certainty, note coverage, and the single largest client footprint.",
+      "colSpan": "narrow"
+    },
+    "personLoad": {
+      "id": "personLoad",
+      "anchorId": "people",
+      "title": "Time in meetings across the company",
+      "description": "All people rolled up by the time they personally spend in recurring meetings.",
+      "tooltip": "The default view shows each person's meeting time split by client and internal work. Selecting a person opens detailed tabs for time by client, day, and meeting type.",
+      "colSpan": "full"
+    },
+    "personBreakdown": {
+      "id": "personBreakdown",
+      "title": "People list",
+      "description": "Click a person to inspect how their meeting time breaks down.",
+      "tooltip": "Lists each person in the company with total recurring meeting time and meeting count. Selecting a row updates the chart panel.",
+      "colSpan": "narrow"
+    },
+    "portfolio": {
+      "id": "portfolio",
+      "anchorId": "portfolio",
+      "title": "Portfolio mix",
+      "description": "Purpose mix, internal versus client work, and client concentration.",
+      "tooltip": "Breaks the recurring meeting footprint into purpose categories, client split, and leading accounts by attendee load.",
+      "colSpan": "full"
+    },
+    "qualityNotes": {
+      "id": "qualityNotes",
+      "anchorId": "quality",
+      "title": "Top meeting cost drivers",
+      "description": "Recurring meetings consuming the most team time and estimated weekly cost.",
+      "tooltip": "Ranks recurring meetings by total weekly attendee time so you can see which individual routines absorb the most team capacity.",
+      "colSpan": "wide"
+    },
+    "clientLoad": {
+      "id": "clientLoad",
+      "title": "Client load leaderboard",
+      "description": "Client accounts ranked by recurring attendee load.",
+      "tooltip": "Ranks client accounts by weekly attendee-minutes so you can see which client work consumes the most recurring team time.",
+      "colSpan": "narrow"
+    },
+    "directory": {
+      "id": "directory",
+      "anchorId": "directory",
+      "title": "Meeting directory",
+      "description": "The denormalized meeting-level source table.",
+      "tooltip": "Each row is one recurring meeting record with source attributes, cadence-adjusted weekly load, and attached notes.",
+      "colSpan": "full"
+    }
+  },
+  "kpiDefinitions": {
+    "Meetings captured": "The number of recurring meeting records loaded into this audit, regardless of cadence.",
+    "Weekly attendee load": "Total attendee-hours per week after adjusting each meeting for duration, attendee count, cadence, and listed weekdays.",
+    "Average room size": "Average number of attendees listed per recurring meeting after ensuring the owner is counted as part of the meeting.",
+    "Busiest weekday": "The weekday with the highest total recurring attendee-minute concentration across the visible workday heat map buckets."
+  },
+  "workloadSummaryDefinitions": {
+    "High-frequency routines": "Counts meetings that recur at least four weekdays each week. This highlights routines that consume calendar space almost every day.",
+    "Approximate durations": "Counts meetings whose duration was entered approximately, such as '120+ minutes'. These entries are directionally useful but less exact.",
+    "Meetings with notes": "Counts meetings carrying either a source note from the CSV or a parser note, such as an approximate duration or missing weekday.",
+    "Largest client footprint": "Shows the client with the largest weekly attendee-minute footprint in the recurring set. Internal meetings are excluded unless no client-tagged meetings exist."
+  },
+  "personChipDefinitions": {
+    "Owned meetings": "The number of recurring meeting records attributed to this normalized owner.",
+    "Peak window": "The weekday and 2-hour block where this person's recurring meeting time is highest. The slot total is cadence-adjusted meeting minutes owned by that person.",
+    "Estimated cost": "A rough weekly cost estimate for this person's owned recurring meeting time, using $100 per person-hour."
+  }
+}
