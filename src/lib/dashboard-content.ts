@@ -1,6 +1,7 @@
 import type { DashboardContent } from "@/types/dashboard"
+import { resolveAssetPath } from "@/lib/paths"
 
-export async function loadDashboardContent(path = "/data/dashboard-content.json") {
+export async function loadDashboardContent(path = resolveAssetPath("data/dashboard-content.json")) {
   const response = await fetch(path)
 
   if (!response.ok) {

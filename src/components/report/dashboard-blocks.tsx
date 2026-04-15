@@ -49,6 +49,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { resolveAssetPath } from "@/lib/paths"
 import { formatHoursFromMinutes, formatMetricMinutes } from "@/lib/reporting"
 import type {
   DashboardContent,
@@ -148,7 +149,7 @@ export function TopBarBlock({ content }: { content: DashboardContent }) {
         <Button
           variant="outline"
           className="rounded-full bg-background/70 backdrop-blur"
-          render={<a href="/data/meeting-audit.csv" download />}
+          render={<a href={resolveAssetPath("data/meeting-audit.csv")} download />}
         >
           <DownloadIcon />
           <span className="hidden sm:inline">Download normalized CSV</span>

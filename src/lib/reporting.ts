@@ -604,7 +604,7 @@ export function createReportSummary(meetings: MeetingRecord[]): ReportSummary {
   }
 }
 
-export async function loadReportSummary(path = "/data/meeting-audit.csv") {
+export async function loadReportSummary(path = resolveAssetPath("data/meeting-audit.csv")) {
   const response = await fetch(path)
 
   if (!response.ok) {
@@ -622,3 +622,4 @@ export function formatHoursFromMinutes(minutes: number) {
 export function formatMetricMinutes(minutes: number) {
   return `${Math.round(minutes).toLocaleString()} min`
 }
+import { resolveAssetPath } from "@/lib/paths"
