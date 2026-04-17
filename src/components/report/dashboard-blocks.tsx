@@ -4,9 +4,11 @@ import {
   Building2Icon,
   Clock3Icon,
   DollarSignIcon,
-  DownloadIcon,
   GaugeIcon,
+  PlusIcon,
+  SearchIcon,
 } from "lucide-react"
+import { useEffect, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -22,9 +24,19 @@ import {
 import { DashboardWidget, DefinitionTooltip } from "@/components/report/dashboard-widget"
 import { MeetingDirectoryDataTable } from "@/components/report/meeting-directory-data-table"
 import { ScheduleHeatmap } from "@/components/report/schedule-heatmap"
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/components/ui/command"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   ChartContainer,
   ChartLegend,
@@ -34,6 +46,12 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
   Table,
@@ -49,13 +67,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { resolveAssetPath } from "@/lib/paths"
 import { formatHoursFromMinutes, formatMetricMinutes } from "@/lib/reporting"
 import type {
   DashboardContent,
   DashboardWidgetDefinition,
   SummaryDrilldownKey,
 } from "@/types/dashboard"
+import type { AppMode, Scenario } from "@/types/planning"
 import type { MeetingRecord, PersonMetric, ReportSummary } from "@/types/report"
 
 const PURPOSE_COLORS = [
@@ -126,37 +144,203 @@ type SummaryDrilldownItem = {
   meetings: MeetingRecord[]
 }
 
-export function TopBarBlock({ content }: { content: DashboardContent }) {
+const HEADER_DASHBOARD_SECTIONS = [
+  { title: "Overview", href: "#overview" },
+  { title: "Schedule load", href: "#schedule" },
+  { title: "Summary detail", href: "#summary-detail" },
+  { title: "People time", href: "#people" },
+  { title: "Portfolio mix", href: "#portfolio" },
+  { title: "Quality notes", href: "#quality" },
+  { title: "Meeting directory", href: "#directory" },
+] as const
+
+function scrollToHash(hash: string) {
+  const target = document.getElementById(hash.slice(1))
+  if (!target) {
+    return
+  }
+
+  target.scrollIntoView({ behavior: "smooth", block: "start" })
+  window.history.replaceState(null, "", hash)
+}
+
+function getScenarioTargetHash(scenario: Scenario) {
+  return scenario.kind === "baseline" ? "#app-header" : "#scenario-controls"
+}
+
+export function TopBarBlock({
+  appMode,
+  activeScenario,
+  activeScenarioId,
+  scenarios,
+  onModeChange,
+  onScenarioChange,
+  onOpenCreateVersion,
+}: {
+  appMode: AppMode
+  activeScenario: Scenario | null
+  activeScenarioId: number | null
+  scenarios: Scenario[]
+  onModeChange: (value: AppMode) => void
+  onScenarioChange: (value: number) => void
+  onOpenCreateVersion: () => void
+}) {
+  const [commandOpen, setCommandOpen] = useState(false)
+  const headerTitle = appMode === "dashboard" ? "Meeting builder" : "Scenario editor"
+  const selectedScenario =
+    scenarios.find((scenario) => scenario.id === (activeScenarioId ?? scenarios[0]?.id)) ??
+    activeScenario ??
+    null
+  const selectedScenarioLabel = selectedScenario
+    ? `${selectedScenario.name}`
+    : "Select version"
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        setCommandOpen(true)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  const navigateToHash = (hash: string) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        scrollToHash(hash)
+      })
+    })
+  }
+
   return (
-    <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/72">
-      <div className="mx-auto flex h-(--header-height) max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3">
-          <SidebarTrigger className="-ml-1 rounded-full" />
-          <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              {content.topBar.eyebrow}
-            </p>
-            <div className="flex min-w-0 items-center gap-2">
-              <p className="truncate text-sm font-medium text-foreground">
-                {content.topBar.title}
-              </p>
-              <Badge className="hidden rounded-full border-none bg-primary/12 px-3 py-1 text-primary sm:inline-flex">
-                {content.topBar.badge}
-              </Badge>
-            </div>
+    <>
+      <header
+        id="app-header"
+        className="bg-background sticky top-0 z-20 w-full min-w-0 border-b border-border/60"
+      >
+        <div className="flex h-(--header-height) w-full items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+          <SidebarTrigger className="size-8 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-medium text-foreground">{headerTitle}</h1>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommandOpen(true)}
+              aria-label="Open command palette"
+              aria-keyshortcuts="Meta+K Control+K"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 shrink-0 justify-center gap-0 rounded-lg px-0 shadow-none sm:w-auto sm:gap-2 sm:px-2.5"
+            >
+              <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
+              <span className="hidden sm:inline-flex">Search</span>
+              <kbd className="bg-muted text-muted-foreground pointer-events-none hidden rounded-md border px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex">
+                Ctrl K
+              </kbd>
+            </Button>
+            <label className="sr-only">Active version</label>
+            <Select
+              value={String(activeScenarioId ?? scenarios[0]?.id ?? "")}
+              onValueChange={(value) => {
+                if (value) {
+                  onScenarioChange(Number(value))
+                }
+              }}
+            >
+              <SelectTrigger
+                aria-label="Active version"
+                className="h-9 min-w-[10rem] rounded-lg border-border bg-background/75 px-3.5 text-sm text-foreground shadow-none sm:min-w-[14rem]"
+              >
+                <span className="flex flex-1 truncate text-left">{selectedScenarioLabel}</span>
+              </SelectTrigger>
+              <SelectContent align="end" className="rounded-xl">
+                {scenarios.map((scenario) => (
+                  <SelectItem key={scenario.id} value={String(scenario.id)}>
+                    {scenario.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-lg bg-background/75 shadow-none"
+              onClick={onOpenCreateVersion}
+              aria-label="Create version"
+              title="Create version"
+            >
+              <PlusIcon />
+            </Button>
           </div>
         </div>
-        <Button
-          variant="outline"
-          className="rounded-full bg-background/70 backdrop-blur"
-          render={<a href={resolveAssetPath("data/meeting-audit.csv")} download />}
-        >
-          <DownloadIcon />
-          <span className="hidden sm:inline">Download normalized CSV</span>
-          <span className="sm:hidden">Download CSV</span>
-        </Button>
-      </div>
-    </header>
+      </header>
+
+      <CommandDialog
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        title="Workspace Commands"
+        description="Jump to dashboard sections, switch scenarios, or create a version."
+        className="sm:max-w-xl"
+      >
+        <Command>
+          <CommandInput placeholder="Search sections or scenarios..." />
+          <CommandList>
+            <CommandEmpty>No matches found.</CommandEmpty>
+            <CommandGroup heading="Dashboard">
+              {HEADER_DASHBOARD_SECTIONS.map((section) => (
+                <CommandItem
+                  key={section.href}
+                  value={`dashboard ${section.title}`}
+                  onSelect={() => {
+                    setCommandOpen(false)
+                    onModeChange("dashboard")
+                    navigateToHash(section.href)
+                  }}
+                >
+                  <SearchIcon className="size-4" />
+                  <span>{section.title}</span>
+                  <CommandShortcut>Dash</CommandShortcut>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandGroup heading="Scenarios">
+              {scenarios.map((scenario) => (
+                <CommandItem
+                  key={scenario.id}
+                  value={`scenario ${scenario.name} ${scenario.kind}`}
+                  onSelect={() => {
+                    setCommandOpen(false)
+                    onModeChange("schedule")
+                    onScenarioChange(scenario.id)
+                    navigateToHash(getScenarioTargetHash(scenario))
+                  }}
+                >
+                  <PlusIcon className="size-4" />
+                  <span>{scenario.name}</span>
+                  <CommandShortcut>{scenario.kind}</CommandShortcut>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandGroup heading="Actions">
+              <CommandItem
+                value="create proposal version"
+                onSelect={() => {
+                  setCommandOpen(false)
+                  onOpenCreateVersion()
+                }}
+              >
+                <PlusIcon />
+                <span>Create proposal version</span>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </CommandDialog>
+    </>
   )
 }
 
@@ -178,7 +362,7 @@ export function HeroBlock({
 
   return (
     <section className="report-hero">
-      <div className="report-card overflow-hidden rounded-[2.25rem] border-none">
+      <div className="report-card overflow-hidden rounded-[1.25rem] border-none">
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:px-10 lg:py-10">
           <div className="grid min-w-0 gap-5">
             <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
@@ -195,25 +379,27 @@ export function HeroBlock({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button
-                className="rounded-full px-5"
-                render={<a href={content.hero.primaryAction.href} />}
+              <a
+                href={content.hero.primaryAction.href}
+                className={buttonVariants({ className: "rounded-full px-5" })}
               >
                 {content.hero.primaryAction.label}
                 <ArrowDownIcon />
-              </Button>
-              <Button
-                variant="outline"
-                className="rounded-full bg-background/60"
-                render={<a href={content.hero.secondaryAction.href} />}
+              </a>
+              <a
+                href={content.hero.secondaryAction.href}
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "rounded-full bg-background/60",
+                })}
               >
                 {content.hero.secondaryAction.label}
-              </Button>
+              </a>
             </div>
           </div>
 
           <div className="grid min-w-0 gap-4 self-end">
-            <div className="grid gap-4 rounded-[1.75rem] border border-border/70 bg-background/65 p-5 backdrop-blur">
+            <div className="grid gap-4 rounded-[1rem] border border-border/70 bg-background/65 p-5 backdrop-blur">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-1.5">
@@ -330,7 +516,7 @@ function OwnerLoadBlock({
       data={data}
       content={
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)] lg:items-stretch">
-          <div className="rounded-[1.5rem] border border-border/70 bg-background/45">
+          <div className="rounded-[1rem] border border-border/70 bg-background/45">
             <Table className="[&_td]:align-top">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -382,7 +568,7 @@ function OwnerLoadBlock({
             </Table>
           </div>
 
-          <div className="grid content-start gap-4 rounded-[1.5rem] border border-border/70 bg-background/45 p-4">
+          <div className="grid content-start gap-4 rounded-[1rem] border border-border/70 bg-background/45 p-4">
             {drilldownItems.map((item) => (
               <MetricTile
                 key={item.key}
@@ -598,7 +784,7 @@ function PersonLoadBlock({
             )}
           </div>
 
-          <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/45 lg:h-[440px]">
+          <div className="overflow-hidden rounded-[1rem] border border-border/70 bg-background/45 lg:h-[440px]">
             <Table className="[&_td]:align-top">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -667,7 +853,7 @@ function PersonBreakdownBlock({
       tooltip={widget.tooltip}
       data={data}
       content={
-        <div className="rounded-[1.5rem] border border-border/70 bg-background/45">
+        <div className="rounded-[1rem] border border-border/70 bg-background/45">
           <Table className="[&_td]:align-top">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -871,7 +1057,7 @@ function PortfolioBlock({ widget, data, content }: ReportBlockProps) {
                 {data.clientMixMetrics.map((metric, index) => (
                   <div
                     key={metric.client}
-                    className="rounded-2xl border border-border/70 bg-background/65 p-4"
+                    className="rounded-xl border border-border/70 bg-background/65 p-4"
                   >
                     <div className="flex items-center gap-3">
                       <span
@@ -904,7 +1090,7 @@ function PortfolioBlock({ widget, data, content }: ReportBlockProps) {
               {clientLeaders.map((metric, index) => (
                 <div
                   key={metric.client}
-                  className="grid gap-2 rounded-2xl border border-border/70 bg-background/65 p-4"
+                  className="grid gap-2 rounded-xl border border-border/70 bg-background/65 p-4"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -955,7 +1141,7 @@ function QualityNotesBlock({ widget, data }: ReportBlockProps) {
       tooltip={widget.tooltip}
       data={data}
       content={
-        <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/45">
+        <div className="overflow-hidden rounded-[1rem] border border-border/70 bg-background/45">
           <Table className="[&_td]:align-top">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -1033,7 +1219,7 @@ function ClientLoadBlock({ widget, data, content }: ReportBlockProps) {
           {clientLeaders.map((client, index) => (
             <div
               key={client.client}
-              className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/65 px-4 py-3"
+              className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-background/65 px-4 py-3"
             >
               <div className="flex items-center gap-3">
                 <span
@@ -1092,7 +1278,7 @@ function HeroChip({
   className?: string
 }) {
   return (
-    <div className={`rounded-2xl border border-border/70 bg-background/75 px-4 py-3 ${className ?? ""}`}>
+    <div className={`rounded-xl border border-border/70 bg-background/75 px-4 py-3 ${className ?? ""}`}>
       <div className="flex items-center gap-2 text-muted-foreground">{icon}</div>
       <div className="mt-3 flex items-center gap-1.5">
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
@@ -1140,8 +1326,8 @@ function MetricTile({
       }
       className={
         compact
-          ? "rounded-2xl border border-border/70 bg-background/75 px-4 py-3"
-          : `rounded-2xl border p-4 ${
+          ? "rounded-xl border border-border/70 bg-background/75 px-4 py-3"
+          : `rounded-xl border p-4 ${
               selected
                 ? "border-primary/70 bg-primary/8 shadow-[0_0_0_1px_color-mix(in_oklch,var(--primary)_35%,transparent)]"
                 : "border-border/70 bg-background/65"

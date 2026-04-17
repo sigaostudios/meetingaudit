@@ -14,6 +14,7 @@ import {
   type PersonMetric,
   type PurposeMetric,
   type QualityNote,
+  type ReportSummaryOptions,
   type ReportSummary,
   type TimeBucketLabel,
   type Weekday,
@@ -28,6 +29,7 @@ const CADENCE_FACTORS: Record<Cadence, number> = {
 
 const SYNTHETIC_START = new Date("2026-01-05T00:00:00")
 const HEATMAP_BUCKET_INDEXES = [4, 5, 6, 7, 8]
+const DEFAULT_COST_PER_PERSON_HOUR_USD = 100
 
 function clean(value: string | undefined): string {
   return (value ?? "").trim()
@@ -183,13 +185,17 @@ function parseClientLabel(value: string) {
   return clean(value) || "Internal"
 }
 
-export function parseMeetingCsv(csvText: string): MeetingRecord[] {
+export function parseMeetingCsvRows(csvText: string): CsvMeetingRow[] {
   const parsed = Papa.parse<CsvMeetingRow>(csvText, {
     header: true,
     skipEmptyLines: true,
   })
 
-  return parsed.data.map((row) => {
+  return parsed.data
+}
+
+export function normalizeMeetingRows(rows: CsvMeetingRow[]): MeetingRecord[] {
+  return rows.map((row) => {
     const frequencyParts = clean(row.frequency)
       .split(";")
       .map((part) => part.trim())
@@ -268,6 +274,10 @@ export function parseMeetingCsv(csvText: string): MeetingRecord[] {
       dataNotes,
     }
   })
+}
+
+export function parseMeetingCsv(csvText: string): MeetingRecord[] {
+  return normalizeMeetingRows(parseMeetingCsvRows(csvText))
 }
 
 function buildHeatCells(meetings: MeetingRecord[]) {
@@ -571,14 +581,19 @@ function buildKpis(
   ]
 }
 
-export function createReportSummary(meetings: MeetingRecord[]): ReportSummary {
+export function createReportSummary(
+  meetings: MeetingRecord[],
+  options: ReportSummaryOptions = {}
+): ReportSummary {
   const heatCells = buildHeatCells(meetings)
   const weekdayTotals = new Map<Weekday, number>()
+  const costPerPersonHourUsd =
+    options.costPerPersonHourUsd ?? DEFAULT_COST_PER_PERSON_HOUR_USD
   const totalWeeklyAttendeeMinutes = meetings.reduce(
     (sum, meeting) => sum + meeting.weeklyWeightedAttendeeMinutes,
     0
   )
-  const weeklyMeetingCost = (totalWeeklyAttendeeMinutes / 60) * 100
+  const weeklyMeetingCost = (totalWeeklyAttendeeMinutes / 60) * costPerPersonHourUsd
 
   for (const cell of heatCells) {
     weekdayTotals.set(cell.weekday, (weekdayTotals.get(cell.weekday) ?? 0) + cell.weight)
@@ -599,20 +614,10 @@ export function createReportSummary(meetings: MeetingRecord[]): ReportSummary {
     qualityNotes: buildQualityNotes(meetings),
     kpis: buildKpis(meetings, heatCells, busiestWeekday),
     totalWeeklyAttendeeMinutes,
+    costPerPersonHourUsd,
     weeklyMeetingCost,
     weeklyMeetingCostLabel: formatCurrency(weeklyMeetingCost),
   }
-}
-
-export async function loadReportSummary(path = resolveAssetPath("data/meeting-audit.csv")) {
-  const response = await fetch(path)
-
-  if (!response.ok) {
-    throw new Error(`Failed to load meeting data: ${response.status}`)
-  }
-
-  const csvText = await response.text()
-  return createReportSummary(parseMeetingCsv(csvText))
 }
 
 export function formatHoursFromMinutes(minutes: number) {
@@ -622,4 +627,3 @@ export function formatHoursFromMinutes(minutes: number) {
 export function formatMetricMinutes(minutes: number) {
   return `${Math.round(minutes).toLocaleString()} min`
 }
-import { resolveAssetPath } from "@/lib/paths"

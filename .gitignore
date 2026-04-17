@@ -7,9 +7,35 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependency and build outputs
+node_modules/
+.pnpm-store/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Next.js outputs
+.next/
+out/
+dist/
+dist-ssr/
+coverage/
+playwright-report/
+test-results/
+
+# TypeScript / tooling artifacts
+*.tsbuildinfo
+*.jsbuildinfo
+.eslintcache
+.cache/
+.turbo/
+.next/cache/
+
+# Env and local settings
+.env
+.env.*
 *.local
 
 # Editor directories and files
@@ -26,5 +52,4 @@ dist-ssr
 # Local inspection / screenshot artifacts
 tmp_*
 tmp*
-
 .vercel

@@ -52,19 +52,26 @@ export function DashboardWidget<TData>({
 
   return (
     <section id={id} className={cn("min-w-0", SPAN_CLASSES[colSpan])}>
-      <Card className={cn("report-card min-w-0 rounded-[1.85rem]", className)}>
-        <CardHeader className="gap-3">
+      <Card
+        className={cn(
+          "report-card min-w-0 rounded-[1.15rem] border border-border/60 bg-background/40",
+          className
+        )}
+      >
+        <CardHeader className="gap-3 border-b border-border/50 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <CardTitle className="text-2xl">
+              <CardTitle className="text-[1.35rem] leading-tight sm:text-[1.5rem]">
                 <TitleWithDefinition title={title} definition={tooltip} />
               </CardTitle>
-              <CardDescription>{description}</CardDescription>
+              <CardDescription className="max-w-[52rem] text-sm leading-6">
+                {description}
+              </CardDescription>
             </div>
             {headerAction}
           </div>
         </CardHeader>
-        <CardContent className={cn("min-w-0", contentClassName)}>{content}</CardContent>
+        <CardContent className={cn("min-w-0 pt-5", contentClassName)}>{content}</CardContent>
       </Card>
     </section>
   )

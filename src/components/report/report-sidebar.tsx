@@ -92,7 +92,15 @@ export function ReportSidebar({
                 <SidebarMenuItem key={section.label}>
                   <SidebarMenuButton
                     tooltip={section.label}
-                    render={<a href={section.href} />}
+                    onClick={() => {
+                      const target = document.getElementById(section.href.slice(1))
+                      if (!target) {
+                        return
+                      }
+
+                      target.scrollIntoView({ behavior: "smooth", block: "start" })
+                      window.history.replaceState(null, "", section.href)
+                    }}
                   >
                     <section.icon />
                     <span>{section.label}</span>

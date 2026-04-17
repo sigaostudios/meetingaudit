@@ -123,6 +123,10 @@ export interface QualityNote {
   detail: string
 }
 
+export interface ReportSummaryOptions {
+  costPerPersonHourUsd?: number
+}
+
 export interface ReportSummary {
   meetings: MeetingRecord[]
   kpis: KpiMetric[]
@@ -135,6 +139,7 @@ export interface ReportSummary {
   busiestWeekday: Weekday | null
   qualityNotes: QualityNote[]
   totalWeeklyAttendeeMinutes: number
+  costPerPersonHourUsd: number
   weeklyMeetingCost: number
   weeklyMeetingCostLabel: string
 }

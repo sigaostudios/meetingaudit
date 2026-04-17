@@ -3,12 +3,9 @@
 import * as React from "react"
 import {
   type ColumnDef,
-  type ColumnFiltersState,
-  type FilterFn,
   type SortingState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -23,6 +20,11 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  ActiveFacetChips,
+  FacetFilter,
+  type FacetOption,
+} from "@/components/ui/facet-filter"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -38,50 +40,63 @@ import type { MeetingRecord } from "@/types/report"
 
 const pageSizes = [10, 25, 50] as const
 
-const textIncludesFilter: FilterFn<MeetingRecord> = (row, columnId, value) => {
-  const query = String(value).trim().toLowerCase()
-  if (!query) return true
-
-  return String(row.getValue(columnId)).toLowerCase().includes(query)
+type SearchFilters = {
+  meeting: string
+  person: string
+  notes: string
 }
 
-const exactMatchFilter: FilterFn<MeetingRecord> = (row, columnId, value) => {
-  const query = String(value).trim()
-  if (!query) return true
-
-  return String(row.getValue(columnId)) === query
+type FacetFilters = {
+  person: string[]
+  client: string[]
+  purpose: string[]
+  cadence: string[]
 }
 
 const columns: ColumnDef<MeetingRecord>[] = [
   {
     accessorKey: "meeting_name",
-    filterFn: textIncludesFilter,
-    header: ({ column }) => <SortHeader column={column} title="Meeting" className="w-[22%] min-w-[14rem]" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Meeting" className="w-[18%] min-w-[14rem]" />
+    ),
     cell: ({ row }) => {
       const meeting = row.original
 
       return (
         <div className="grid gap-1 whitespace-normal">
-          <div>
-            <p className="font-medium">{meeting.meeting_name}</p>
-            <p className="text-xs text-muted-foreground">
-              {meeting.time} / {meeting.timeBucketLabel}
-            </p>
-          </div>
+          <p className="font-medium text-foreground">{meeting.meeting_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {meeting.time} / {meeting.timeBucketLabel} / {meeting.attendeeCount} attendees
+          </p>
         </div>
       )
     },
   },
   {
     accessorKey: "owner_name",
-    filterFn: textIncludesFilter,
-    header: ({ column }) => <SortHeader column={column} title="Owner" className="w-[10rem]" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Person" className="w-[11rem]" />
+    ),
     cell: ({ row }) => <span className="whitespace-normal">{row.original.owner_name}</span>,
   },
   {
+    accessorKey: "primary_purpose",
+    header: ({ column }) => (
+      <SortHeader column={column} title="Purpose" className="w-[16%] min-w-[12rem]" />
+    ),
+    cell: ({ row }) => (
+      <div className="max-w-[15rem] whitespace-normal">
+        {row.original.primary_purpose || (
+          <span className="text-sm text-muted-foreground">No purpose</span>
+        )}
+      </div>
+    ),
+  },
+  {
     accessorKey: "cadence",
-    filterFn: exactMatchFilter,
-    header: ({ column }) => <SortHeader column={column} title="Cadence" className="w-[18%] min-w-[12rem]" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Cadence" className="w-[16%] min-w-[12rem]" />
+    ),
     cell: ({ row }) => {
       const meeting = row.original
 
@@ -98,23 +113,10 @@ const columns: ColumnDef<MeetingRecord>[] = [
     },
   },
   {
-    accessorKey: "attendeeCount",
-    header: ({ column }) => <SortHeader column={column} title="Attendees" className="w-[20%] min-w-[14rem]" />,
-    cell: ({ row }) => {
-      const meeting = row.original
-
-      return (
-        <div className="max-w-[16rem] whitespace-normal">
-          <p>{meeting.attendeeCount} people</p>
-          <p className="text-xs text-muted-foreground">{meeting.attendeeList.join(", ")}</p>
-        </div>
-      )
-    },
-  },
-  {
     accessorKey: "clientLabel",
-    filterFn: exactMatchFilter,
-    header: ({ column }) => <SortHeader column={column} title="Client" className="w-[8rem]" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Client" className="w-[9rem]" />
+    ),
     cell: ({ row }) => {
       const meeting = row.original
 
@@ -128,8 +130,9 @@ const columns: ColumnDef<MeetingRecord>[] = [
   {
     id: "notes",
     accessorFn: (row) => row.dataNotes.join(" "),
-    filterFn: textIncludesFilter,
-    header: ({ column }) => <SortHeader column={column} title="Notes" className="w-[20%] min-w-[14rem]" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Notes" className="w-[24%] min-w-[18rem]" />
+    ),
     cell: ({ row }) => {
       const notes = row.original.dataNotes
 
@@ -138,14 +141,11 @@ const columns: ColumnDef<MeetingRecord>[] = [
       }
 
       return (
-        <div className="grid gap-2 whitespace-normal">
+        <div className="grid w-full min-w-0 max-w-full gap-1">
           {notes.map((note) => (
-            <div
-              key={note}
-              className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2 text-sm leading-5 whitespace-normal break-words text-foreground/90"
-            >
+            <p key={note} className="min-w-0 text-xs leading-5 text-muted-foreground whitespace-normal break-words">
               {note}
-            </div>
+            </p>
           ))}
         </div>
       )
@@ -153,7 +153,9 @@ const columns: ColumnDef<MeetingRecord>[] = [
   },
   {
     accessorKey: "weeklyWeightedAttendeeMinutes",
-    header: ({ column }) => <SortHeader column={column} title="Weekly load" className="w-[9rem] justify-end" />,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Weekly load" className="w-[9rem] justify-end" />
+    ),
     cell: ({ row }) => {
       const meeting = row.original
 
@@ -171,40 +173,206 @@ const columns: ColumnDef<MeetingRecord>[] = [
   },
 ]
 
+function normalizeFilterValue(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function buildFacetOptions(values: string[]): FacetOption[] {
+  const optionsByValue = new Map<string, string>()
+
+  for (const value of values) {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      continue
+    }
+
+    const normalized = normalizeFilterValue(trimmed)
+    if (!optionsByValue.has(normalized)) {
+      optionsByValue.set(normalized, trimmed)
+    }
+  }
+
+  return Array.from(optionsByValue.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((left, right) => left.label.localeCompare(right.label))
+}
+
+function toggleFilterValue(values: string[], value: string) {
+  return values.includes(value)
+    ? values.filter((existingValue) => existingValue !== value)
+    : [...values, value]
+}
+
 export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecord[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "weeklyWeightedAttendeeMinutes", desc: true },
   ])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [searchFilters, setSearchFilters] = React.useState<SearchFilters>({
+    meeting: "",
+    person: "",
+    notes: "",
+  })
+  const [facetFilters, setFacetFilters] = React.useState<FacetFilters>({
+    person: [],
+    client: [],
+    purpose: [],
+    cadence: [],
+  })
 
+  const personOptions = React.useMemo(
+    () => buildFacetOptions(meetings.map((meeting) => meeting.owner_name)),
+    [meetings]
+  )
   const clientOptions = React.useMemo(
-    () =>
-      [...new Set(meetings.map((meeting) => meeting.clientLabel))]
-        .filter(Boolean)
-        .sort((left, right) => left.localeCompare(right)),
+    () => buildFacetOptions(meetings.map((meeting) => meeting.clientLabel)),
+    [meetings]
+  )
+  const purposeOptions = React.useMemo(
+    () => buildFacetOptions(meetings.map((meeting) => meeting.primary_purpose)),
+    [meetings]
+  )
+  const cadenceOptions = React.useMemo(
+    () => buildFacetOptions(meetings.map((meeting) => meeting.cadence)),
     [meetings]
   )
 
-  const cadenceOptions = React.useMemo(
-    () =>
-      [...new Set(meetings.map((meeting) => meeting.cadence))]
-        .filter(Boolean)
-        .sort((left, right) => left.localeCompare(right)),
-    [meetings]
+  const matchesFilters = React.useCallback(
+    (meeting: MeetingRecord, omittedFacet?: keyof FacetFilters) => {
+      const meetingQuery = searchFilters.meeting.trim().toLowerCase()
+      if (
+        meetingQuery &&
+        !`${meeting.meeting_name} ${meeting.time} ${meeting.timeBucketLabel}`
+          .toLowerCase()
+          .includes(meetingQuery)
+      ) {
+        return false
+      }
+
+      const personQuery = searchFilters.person.trim().toLowerCase()
+      if (personQuery && !meeting.owner_name.toLowerCase().includes(personQuery)) {
+        return false
+      }
+
+      const notesQuery = searchFilters.notes.trim().toLowerCase()
+      if (
+        notesQuery &&
+        !meeting.dataNotes.join(" ").toLowerCase().includes(notesQuery)
+      ) {
+        return false
+      }
+
+      if (
+        omittedFacet !== "person" &&
+        facetFilters.person.length > 0 &&
+        !facetFilters.person.includes(normalizeFilterValue(meeting.owner_name))
+      ) {
+        return false
+      }
+
+      if (
+        omittedFacet !== "client" &&
+        facetFilters.client.length > 0 &&
+        !facetFilters.client.includes(normalizeFilterValue(meeting.clientLabel))
+      ) {
+        return false
+      }
+
+      if (
+        omittedFacet !== "purpose" &&
+        facetFilters.purpose.length > 0 &&
+        !facetFilters.purpose.includes(normalizeFilterValue(meeting.primary_purpose))
+      ) {
+        return false
+      }
+
+      if (
+        omittedFacet !== "cadence" &&
+        facetFilters.cadence.length > 0 &&
+        !facetFilters.cadence.includes(normalizeFilterValue(meeting.cadence))
+      ) {
+        return false
+      }
+
+      return true
+    },
+    [facetFilters, searchFilters]
   )
+
+  const filteredMeetings = React.useMemo(
+    () => meetings.filter((meeting) => matchesFilters(meeting)),
+    [matchesFilters, meetings]
+  )
+
+  const facetCounts = React.useMemo(() => {
+    const countByFacet = (facet: keyof FacetFilters) => {
+      const counts = new Map<string, number>()
+
+      for (const meeting of meetings) {
+        if (!matchesFilters(meeting, facet)) {
+          continue
+        }
+
+        const value =
+          facet === "person"
+            ? normalizeFilterValue(meeting.owner_name)
+            : facet === "client"
+              ? normalizeFilterValue(meeting.clientLabel)
+              : facet === "purpose"
+                ? normalizeFilterValue(meeting.primary_purpose)
+                : normalizeFilterValue(meeting.cadence)
+
+        if (!value) {
+          continue
+        }
+
+        counts.set(value, (counts.get(value) ?? 0) + 1)
+      }
+
+      return counts
+    }
+
+    return {
+      person: countByFacet("person"),
+      client: countByFacet("client"),
+      purpose: countByFacet("purpose"),
+      cadence: countByFacet("cadence"),
+    }
+  }, [matchesFilters, meetings])
+
+  const hasActiveFacetFilters =
+    facetFilters.person.length > 0 ||
+    facetFilters.client.length > 0 ||
+    facetFilters.purpose.length > 0 ||
+    facetFilters.cadence.length > 0
+  const hasSearchFilters =
+    searchFilters.meeting.trim().length > 0 ||
+    searchFilters.person.trim().length > 0 ||
+    searchFilters.notes.trim().length > 0
+  const hasAnyFilters = hasActiveFacetFilters || hasSearchFilters
+
+  const clearFilters = () => {
+    setSearchFilters({
+      meeting: "",
+      person: "",
+      notes: "",
+    })
+    setFacetFilters({
+      person: [],
+      client: [],
+      purpose: [],
+      cadence: [],
+    })
+  }
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table manages its own imperative table API.
   const table = useReactTable({
-    data: meetings,
+    data: filteredMeetings,
     columns,
     state: {
       sorting,
-      columnFilters,
     },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
@@ -216,70 +384,157 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
 
   const pageIndex = table.getState().pagination.pageIndex
   const pageSize = table.getState().pagination.pageSize
-  const filteredCount = table.getFilteredRowModel().rows.length
+  const filteredCount = filteredMeetings.length
   const startRow = filteredCount === 0 ? 0 : pageIndex * pageSize + 1
   const endRow = Math.min((pageIndex + 1) * pageSize, filteredCount)
-  const hasColumnFilters = columnFilters.length > 0
 
   return (
     <div className="grid gap-4">
-      <div className="flex justify-end">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+        <div>
           {filteredCount.toLocaleString()} of {meetings.length.toLocaleString()} meetings
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-border/70 bg-background/35 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_12rem_12rem_minmax(0,1fr)_auto]">
-        <FilterField
-          label="Meeting"
-          value={(table.getColumn("meeting_name")?.getFilterValue() as string) ?? ""}
-          onChange={(value) => table.getColumn("meeting_name")?.setFilterValue(value)}
-          placeholder="Filter meeting name"
-        />
-        <FilterField
-          label="Owner"
-          value={(table.getColumn("owner_name")?.getFilterValue() as string) ?? ""}
-          onChange={(value) => table.getColumn("owner_name")?.setFilterValue(value)}
-          placeholder="Filter owner"
-        />
-        <FilterSelect
-          label="Client"
-          value={(table.getColumn("clientLabel")?.getFilterValue() as string) ?? ""}
-          onChange={(value) => table.getColumn("clientLabel")?.setFilterValue(value)}
-          options={clientOptions}
-        />
-        <FilterSelect
-          label="Cadence"
-          value={(table.getColumn("cadence")?.getFilterValue() as string) ?? ""}
-          onChange={(value) => table.getColumn("cadence")?.setFilterValue(value)}
-          options={cadenceOptions}
-        />
-        <FilterField
-          label="Notes"
-          value={(table.getColumn("notes")?.getFilterValue() as string) ?? ""}
-          onChange={(value) => table.getColumn("notes")?.setFilterValue(value)}
-          placeholder="Filter note content"
-        />
-        <div className="flex items-end">
+      <div className="grid gap-3 rounded-[1rem] border border-border/70 bg-background/35 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <DirectorySearchField
+            value={searchFilters.meeting}
+            onChange={(value) =>
+              setSearchFilters((current) => ({ ...current, meeting: value }))
+            }
+            placeholder="Search meeting..."
+          />
+          <DirectorySearchField
+            value={searchFilters.person}
+            onChange={(value) =>
+              setSearchFilters((current) => ({ ...current, person: value }))
+            }
+            placeholder="Search person..."
+          />
+          <DirectorySearchField
+            value={searchFilters.notes}
+            onChange={(value) =>
+              setSearchFilters((current) => ({ ...current, notes: value }))
+            }
+            placeholder="Search notes..."
+          />
+          <FacetFilter
+            label="Person"
+            options={personOptions}
+            selectedValues={facetFilters.person}
+            counts={facetCounts.person}
+            onToggleValue={(value) =>
+              setFacetFilters((current) => ({
+                ...current,
+                person: toggleFilterValue(current.person, value),
+              }))
+            }
+          />
+          <FacetFilter
+            label="Client"
+            options={clientOptions}
+            selectedValues={facetFilters.client}
+            counts={facetCounts.client}
+            onToggleValue={(value) =>
+              setFacetFilters((current) => ({
+                ...current,
+                client: toggleFilterValue(current.client, value),
+              }))
+            }
+          />
+          <FacetFilter
+            label="Purpose"
+            options={purposeOptions}
+            selectedValues={facetFilters.purpose}
+            counts={facetCounts.purpose}
+            onToggleValue={(value) =>
+              setFacetFilters((current) => ({
+                ...current,
+                purpose: toggleFilterValue(current.purpose, value),
+              }))
+            }
+          />
+          <FacetFilter
+            label="Cadence"
+            options={cadenceOptions}
+            selectedValues={facetFilters.cadence}
+            counts={facetCounts.cadence}
+            onToggleValue={(value) =>
+              setFacetFilters((current) => ({
+                ...current,
+                cadence: toggleFilterValue(current.cadence, value),
+              }))
+            }
+          />
           <Button
             type="button"
             variant="outline"
-            className="w-full"
-            disabled={!hasColumnFilters}
-            onClick={() => setColumnFilters([])}
+            className="ml-auto h-9 rounded-xl px-3"
+            disabled={!hasAnyFilters}
+            onClick={clearFilters}
           >
-            Clear filters
+            Clear
           </Button>
         </div>
+
+        {hasActiveFacetFilters ? (
+          <div className="flex flex-wrap gap-2">
+            <ActiveFacetChips
+              facetLabel="Person"
+              options={personOptions}
+              selectedValues={facetFilters.person}
+              onRemoveValue={(value) =>
+                setFacetFilters((current) => ({
+                  ...current,
+                  person: current.person.filter((currentValue) => currentValue !== value),
+                }))
+              }
+            />
+            <ActiveFacetChips
+              facetLabel="Client"
+              options={clientOptions}
+              selectedValues={facetFilters.client}
+              onRemoveValue={(value) =>
+                setFacetFilters((current) => ({
+                  ...current,
+                  client: current.client.filter((currentValue) => currentValue !== value),
+                }))
+              }
+            />
+            <ActiveFacetChips
+              facetLabel="Purpose"
+              options={purposeOptions}
+              selectedValues={facetFilters.purpose}
+              onRemoveValue={(value) =>
+                setFacetFilters((current) => ({
+                  ...current,
+                  purpose: current.purpose.filter((currentValue) => currentValue !== value),
+                }))
+              }
+            />
+            <ActiveFacetChips
+              facetLabel="Cadence"
+              options={cadenceOptions}
+              selectedValues={facetFilters.cadence}
+              onRemoveValue={(value) =>
+                setFacetFilters((current) => ({
+                  ...current,
+                  cadence: current.cadence.filter((currentValue) => currentValue !== value),
+                }))
+              }
+            />
+          </div>
+        ) : null}
       </div>
 
-      <div className="rounded-2xl border border-border/70 bg-background/40">
-        <Table className="w-full table-fixed [&_td]:align-top">
-          <TableHeader>
+      <div className="overflow-hidden rounded-[1rem] border border-border/70 bg-background/15">
+        <Table className="min-w-[1160px] table-fixed [&_td]:align-top">
+          <TableHeader className="bg-background/50">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="h-11 border-b border-border/70">
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -291,21 +546,31 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="border-b border-border/60 bg-transparent hover:bg-background/40"
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        "py-3.5 overflow-hidden",
+                        cell.column.id === "notes" && "max-w-0",
+                        cell.column.id === "weeklyWeightedAttendeeMinutes" && "w-[9rem]"
+                      )}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={table.getVisibleLeafColumns().length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No meetings match the current filter.
+                  No meetings match the current filters.
                 </TableCell>
               </TableRow>
             )}
@@ -326,6 +591,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
                 type="button"
                 size="sm"
                 variant={pageSize === size ? "secondary" : "outline"}
+                className="rounded-lg"
                 onClick={() => table.setPageSize(size)}
               >
                 {size}
@@ -338,6 +604,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
               type="button"
               size="sm"
               variant="outline"
+              className="rounded-lg"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -348,6 +615,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
               type="button"
               size="sm"
               variant="outline"
+              className="rounded-lg"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
@@ -361,55 +629,22 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
   )
 }
 
-type FilterFieldProps = {
-  label: string
+function DirectorySearchField({
+  value,
+  onChange,
+  placeholder,
+}: {
   value: string
   onChange: (value: string) => void
   placeholder: string
-}
-
-function FilterField({ label, value, onChange, placeholder }: FilterFieldProps) {
+}) {
   return (
-    <label className="grid gap-2 text-sm">
-      <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </span>
-      <Input
-        value={value}
-        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="bg-background/75"
-      />
-    </label>
-  )
-}
-
-type FilterSelectProps = {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  options: string[]
-}
-
-function FilterSelect({ label, value, onChange, options }: FilterSelectProps) {
-  return (
-    <label className="grid gap-2 text-sm">
-      <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="flex h-8 w-full rounded-lg border border-border bg-background/75 px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <option value="">All</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Input
+      value={value}
+      onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+      placeholder={placeholder}
+      className="h-9 min-w-[13rem] rounded-lg border-border/70 bg-background/90 px-3 shadow-none sm:w-[14rem]"
+    />
   )
 }
 

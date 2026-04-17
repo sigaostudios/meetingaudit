@@ -8,11 +8,27 @@ import { formatHoursFromMinutes } from "@/lib/reporting"
 import { TIME_BUCKETS, WEEKDAYS, type HeatCellMetric, type TimeBucketLabel, type Weekday } from "@/types/report"
 
 const HEAT_COLORS = [
-  "color-mix(in oklch, var(--muted) 90%, white 10%)",
-  "color-mix(in oklch, var(--chart-3) 32%, white 68%)",
-  "color-mix(in oklch, var(--chart-2) 58%, white 42%)",
-  "color-mix(in oklch, var(--chart-1) 72%, white 28%)",
-  "color-mix(in oklch, var(--chart-1) 92%, black 4%)",
+  "rgba(17,24,39,0.26)",
+  "rgba(127,29,29,0.42)",
+  "rgba(185,28,28,0.58)",
+  "rgba(239,68,68,0.78)",
+  "#ef4444",
+] as const
+
+const HEAT_GLOW = [
+  "",
+  "shadow-[0_0_12px_rgba(248,113,113,0.20)]",
+  "shadow-[0_0_14px_rgba(248,113,113,0.28)]",
+  "shadow-[0_0_16px_rgba(248,113,113,0.40)]",
+  "shadow-[0_0_18px_rgba(248,113,113,0.54)]",
+] as const
+
+const HEAT_RING = [
+  "",
+  "ring-1 ring-red-200/20",
+  "ring-1 ring-red-200/28",
+  "ring-1 ring-red-100/36",
+  "ring-1 ring-red-50/45",
 ] as const
 
 const VISIBLE_TIME_BUCKETS = TIME_BUCKETS.slice(4, 9)
@@ -68,7 +84,7 @@ export function ScheduleHeatmap({ cells }: ScheduleHeatmapProps) {
   )
 
   return (
-    <div className="grid gap-4">
+    <div className="grid w-full justify-items-center gap-4 max-w-[40rem] mx-auto">
       <HeatGraphComposite<HeatCellMetric>
         data={data}
         start={SYNTHETIC_GRID_START}
@@ -76,24 +92,29 @@ export function ScheduleHeatmap({ cells }: ScheduleHeatmapProps) {
         rowLabels={WEEKDAYS.map((weekday) => weekday.slice(0, 3))}
         columnLabels={VISIBLE_TIME_BUCKETS.map((label) => label.slice(0, 5))}
         colorScale={HEAT_COLORS}
+        minWidth="34rem"
         classify={quantileClassify}
         getCellClassName={({ cell }) =>
-          cell.level > 0 ? "text-slate-950" : "text-slate-100"
+          cell.level > 3
+            ? `text-white ${HEAT_GLOW[4]} ${HEAT_RING[4]}`
+            : cell.level > 0
+              ? `text-rose-50/95 ${HEAT_GLOW[cell.level] ?? ""} ${HEAT_RING[cell.level] ?? ""}`
+              : "text-slate-500"
         }
         getMeta={(cell) =>
           cellMetaByDate.get(formatDateKey(cell.date)) ??
           createEmptyCell(WEEKDAYS[cell.row]!, VISIBLE_TIME_BUCKETS[cell.column]!)
         }
         renderCellContent={({ meta }) =>
-          meta ? (
+          meta && meta.weight > 0 ? (
             <>
               <span className="font-mono text-sm font-medium tabular-nums">
-                {meta.weight > 0 ? formatHoursFromMinutes(meta.weight) : "0.0h"}
+                {formatHoursFromMinutes(meta.weight)}
               </span>
               <span className="text-xs opacity-78">
                 {meta.meetingCount > 0
                   ? `${meta.meetingCount} recurring meeting${meta.meetingCount === 1 ? "" : "s"}`
-                  : "No recurring meetings"}
+                  : ""}
               </span>
             </>
           ) : null
