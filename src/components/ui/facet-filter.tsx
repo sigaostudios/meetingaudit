@@ -17,6 +17,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+const NO_COMMAND_SELECTION = "__facet_filter_no_selection__"
+
 export type FacetOption = {
   value: string
   label: string
@@ -38,10 +40,19 @@ export function FacetFilter({
   onToggleValue,
 }: FacetFilterProps) {
   const [open, setOpen] = useState(false)
+  const [commandValue, setCommandValue] = useState(NO_COMMAND_SELECTION)
   const selectedCount = selectedValues.length
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+
+    if (nextOpen) {
+      setCommandValue(NO_COMMAND_SELECTION)
+    }
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
           <Button
@@ -65,8 +76,12 @@ export function FacetFilter({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-72 rounded-xl p-0">
-        <Command>
+      <PopoverContent
+        align="start"
+        initialFocus={(openType) => openType === "keyboard"}
+        className="w-72 rounded-xl p-0"
+      >
+        <Command value={commandValue} onValueChange={setCommandValue}>
           <CommandInput placeholder={`Search ${label.toLowerCase()}...`} />
           <CommandList className="max-h-80 p-1">
             <CommandEmpty>No {label.toLowerCase()} found.</CommandEmpty>
