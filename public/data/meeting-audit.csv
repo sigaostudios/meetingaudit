@@ -1,9 +1,9 @@
 submission_date,owner_name,meeting_name,time,frequency,duration,primary_purpose,attendees,client_if_applicable,notes,source_excel_row
 15-Apr-26,Luke,InRule Daily Standup,10:15 AM,Monday; Tuesday; Wednesday; Thursday; Friday; Weekly,15 minutes,Planning,Luke; Rich; Chris B,InRule,,2
 15-Apr-26,Luke,InRule Refinement,10:30 AM,Monday; Thursday; Weekly,30 minutes,Planning,Luke; Rich; Chris B,InRule,,2
-15-Apr-26,Luke,InRule Review,10:00 AM,Tuesday; Biweekly,60 minutes,Information sharing,Luke; Rich; Chris B,InRule,,2
-15-Apr-26,Luke,InRule Planning,1:00 PM,Tuesday; Biweekly,60 minutes,Planning,Luke; Rich; Chris B,InRule,,2
-15-Apr-26,Luke,InRule Sprint Retro,10:30 AM,Wednesday; Biweekly,30 minutes,Problem solving,Luke; Rich; Chris B,InRule,,2
+15-Apr-26,Luke,InRule Review,10:00 AM,Tuesday; Biweekly; Week 2,60 minutes,Information sharing,Luke; Rich; Chris B,InRule,,2
+15-Apr-26,Luke,InRule Planning,1:00 PM,Tuesday; Biweekly; Week 1,60 minutes,Planning,Luke; Rich; Chris B,InRule,,2
+15-Apr-26,Luke,InRule Sprint Retro,10:30 AM,Wednesday; Biweekly; Week 2,30 minutes,Problem solving,Luke; Rich; Chris B,InRule,,2
 14-Apr-26,Brandon,Birmingham Checkin,11:00 AM,Wednesday; Biweekly,30 minutes,Status update,Brandon; Carter,City of Birmingham,,3
 14-Apr-26,Brandon,Innovation/Strategy,2:30 PM,Thursday; Biweekly,60 minutes,Problem solving,Brandon; McCaul,,,3
 14-Apr-26,Brandon,TBD Planning,9:30 AM,Monday,30 minutes,Planning,Chris S.; Brandon; Carter; Luke; McCaul; Corey,,,4
@@ -13,11 +13,12 @@ submission_date,owner_name,meeting_name,time,frequency,duration,primary_purpose,
 14-Apr-26,Matt,"Alden Backlog ""Refinement""",11:00 AM,Tuesday,120 minutes,Client,Matt; Katelyn; Ross; Client,Alden,,5
 14-Apr-26,Carter,Board Meeting,4:30 PM,Monday; Weekly,60 minutes,Decision making,Chris S.; Brandon; Carter; Luke,,,6
 14-Apr-26,Carter,Dev Daily Scrum,10:00 AM,Monday; Tuesday; Wednesday; Thursday; Friday; Weekly,15 minutes,Planning,Chris S.; Brandon; Carter; Luke; Matt; Rich; Chris B; Katelyn; Ross,,,6
-14-Apr-26,Carter,Dev Retro,3:00 PM,Monday; Biweekly,60 minutes,Problem solving,Chris S.; Carter; Luke; Matt; Rich; Chris B; Katelyn; Ross,,,6
+14-Apr-26,Carter,Dev Retro,3:00 PM,Monday; Biweekly; Week 2,60 minutes,Problem solving,Chris S.; Carter; Luke; Matt; Rich; Chris B; Katelyn; Ross,,,6
 14-Apr-26,Carter,Alden dashboard discussion,11:00 AM,Tuesday; Weekly,60 minutes,Other,Carter; Client,Alden,"new meeting, shouldn't last long",6
 14-Apr-26,Carter,Dev CoP Working Session,1:30 PM,Wednesday; Weekly,30 minutes,Planning,Chris S.; Brandon; Carter; Luke; Matt; Rich; Chris B; Katelyn; Ross,,not a meeting for the whole time - plan then working session,6
 14-Apr-26,Carter,Dev CoP,11:00 AM,Thursday; Weekly,60 minutes,Information sharing,Chris S.; Brandon; Carter; Luke; Matt; Rich; Chris B; Katelyn; Ross,,,6
 14-Apr-26,Chris S,Unity Team NextGen,9:00 AM,Monday; Wednesday; Friday,60 minutes,Status update,Chris S.; Carter; Luke; Rich,Credex,,7
 14-Apr-26,Chris S,Gartner Strategy Session,3:00 PM,Tuesday,30 minutes,Information sharing,Chris S.; Brandon; Luke,,,7
 14-Apr-26,McCaul,Tech Angels Daily Scrum,9:00 AM,Monday; Tuesday; Thursday; Friday,30 minutes,Client,McCaul; Client,City of Birmingham,,8
-14-Apr-26,McCaul,Tech Angels Scrum Events,10:00 AM,Wednesday,120 minutes,Client,McCaul; Client,City of Birmingham,,8
+14-Apr-26,McCaul,Tech Angels Sprint Planning,10:00 AM,Wednesday; Biweekly; Week 1,120 minutes,Planning,McCaul; Client,City of Birmingham,,8
+14-Apr-26,McCaul,Tech Angels Sprint Review/Retro,10:00 AM,Wednesday; Biweekly; Week 2,120 minutes,Problem solving,McCaul; Client,City of Birmingham,,8

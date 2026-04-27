@@ -3,6 +3,7 @@ import Papa from "papaparse"
 import {
   TIME_BUCKETS,
   WEEKDAYS,
+  type BiweeklyWeek,
   type Cadence,
   type ClientMetric,
   type CsvMeetingRow,
@@ -40,6 +41,12 @@ function parseCadence(parts: string[]): Cadence {
   if (parts.includes("Biweekly")) return "Biweekly"
   if (parts.includes("Monthly")) return "Monthly"
   return "Weekly"
+}
+
+function parseBiweeklyWeek(parts: string[]): BiweeklyWeek | null {
+  if (parts.includes("Week 1")) return "Week 1"
+  if (parts.includes("Week 2")) return "Week 2"
+  return null
 }
 
 function parseDurationMinutes(duration: string) {
@@ -206,6 +213,7 @@ export function normalizeMeetingRows(rows: CsvMeetingRow[]): MeetingRecord[] {
     )
 
     const cadence = parseCadence(frequencyParts)
+    const biweeklyWeek = cadence === "Biweekly" ? parseBiweeklyWeek(frequencyParts) : null
     const cadenceFactor = CADENCE_FACTORS[cadence]
     const { minutes: durationMinutes, approximate } = parseDurationMinutes(
       clean(row.duration)
@@ -235,6 +243,12 @@ export function normalizeMeetingRows(rows: CsvMeetingRow[]): MeetingRecord[] {
       dataNotes.push("No weekday listed; excluded from weekday heat map totals.")
     }
 
+    if (cadence === "Biweekly" && !biweeklyWeek) {
+      dataNotes.push(
+        "Biweekly meeting has no Week 1/Week 2 assignment; shown in both schedule weeks until assigned."
+      )
+    }
+
     if (clean(row.notes)) {
       dataNotes.push(clean(row.notes))
     }
@@ -256,6 +270,7 @@ export function normalizeMeetingRows(rows: CsvMeetingRow[]): MeetingRecord[] {
       attendeeCount,
       weekdays,
       cadence,
+      biweeklyWeek,
       cadenceFactor,
       durationMinutes,
       approximateDuration: approximate,
@@ -266,6 +281,7 @@ export function normalizeMeetingRows(rows: CsvMeetingRow[]): MeetingRecord[] {
       clientLabel,
       isInternal: clientLabel === "Internal",
       weeklyOccurrenceCount,
+      weeklyAdjustedOccurrenceCount: weeklyOccurrenceCount * cadenceFactor,
       weeklyWeightedMinutes: durationMinutes * cadenceFactor * weeklyOccurrenceCount,
       weeklyWeightedAttendeeMinutes:
         durationMinutes * attendeeCount * cadenceFactor * weeklyOccurrenceCount,
@@ -528,9 +544,11 @@ function buildQualityNotes(meetings: MeetingRecord[]): QualityNote[] {
     for (const note of meeting.dataNotes) {
       const label = note.includes("No weekday")
         ? "Unmapped cadence"
-        : note.includes("Approximate duration")
-          ? "Approximate duration"
-          : "Source note"
+        : note.includes("Week 1/Week 2 assignment")
+          ? "Unassigned biweekly"
+          : note.includes("Approximate duration")
+            ? "Approximate duration"
+            : "Source note"
 
       const detail = `${meeting.meeting_name} (${meeting.owner_name}): ${note}`
       notes.set(detail, { label, detail })

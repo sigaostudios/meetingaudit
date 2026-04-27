@@ -59,6 +59,7 @@ import {
   parseDurationMinutes,
   parseRecurrence,
   parseTimeToMinutes,
+  type BiweeklyWeek,
 } from "@/lib/schedule-utils"
 import type { DashboardEntityColors } from "@/types/dashboard"
 import { WEEKDAYS, type Weekday } from "@/types/report"
@@ -140,6 +141,7 @@ type MeetingDraft = {
   startMinutes: number
   durationMinutes: number
   cadence: "Weekly" | "Biweekly" | "Monthly"
+  biweeklyWeek: BiweeklyWeek | null
   weekdays: Weekday[]
   primaryPurpose: string
   attendees: string
@@ -210,6 +212,7 @@ function getMeetingDraft(meeting: ScenarioMeetingRow, linkedBaselineIds: number[
     startMinutes: parseTimeToMinutes(meeting.time),
     durationMinutes: parseDurationMinutes(meeting.duration),
     cadence: recurrence.cadence,
+    biweeklyWeek: recurrence.biweeklyWeek,
     weekdays: recurrence.weekdays,
     primaryPurpose: meeting.primary_purpose,
     attendees: meeting.attendees,
@@ -229,6 +232,7 @@ function createEmptyDraft(baselineMeetingIds: number[] = []): MeetingDraft {
     startMinutes: 9 * 60,
     durationMinutes: 30,
     cadence: "Weekly",
+    biweeklyWeek: null,
     weekdays: ["Monday"],
     primaryPurpose: "Planning",
     attendees: "",
@@ -294,6 +298,21 @@ function formatAttendeeList(attendees: string[]) {
 
 function parseClientLabel(value: string) {
   return value.trim() || "Internal"
+}
+
+function getWeekColumnIndexes(weekday: Weekday, recurrence: ReturnType<typeof parseRecurrence>) {
+  return WEEK_COLUMNS.flatMap((column, index) => {
+    if (column.weekday !== weekday) {
+      return []
+    }
+
+    if (recurrence.cadence !== "Biweekly" || !recurrence.biweeklyWeek) {
+      return [index]
+    }
+
+    const recurrenceWeek = recurrence.biweeklyWeek === "Week 1" ? 1 : 2
+    return column.week === recurrenceWeek ? [index] : []
+  })
 }
 
 function getFallbackColor(label: string, palette: readonly string[]) {
@@ -693,9 +712,7 @@ export function ScheduleBuilder({
       const tone = decisionByBaselineId.get(meeting.id) ?? "continue"
 
       for (const weekday of recurrence.weekdays) {
-        const dayIndexes = WEEK_COLUMNS.flatMap((column, index) =>
-          column.weekday === weekday ? [index] : []
-        )
+        const dayIndexes = getWeekColumnIndexes(weekday, recurrence)
 
         for (const colIndex of dayIndexes) {
           blocks.push({
@@ -732,9 +749,7 @@ export function ScheduleBuilder({
       const heightPx = Math.max(18, ((endOffset - startOffset) / TOTAL_MINUTES) * GRID_HEIGHT_PX)
 
       for (const weekday of recurrence.weekdays) {
-        const dayIndexes = WEEK_COLUMNS.flatMap((column, index) =>
-          column.weekday === weekday ? [index] : []
-        )
+        const dayIndexes = getWeekColumnIndexes(weekday, recurrence)
 
         for (const colIndex of dayIndexes) {
           blocks.push({
@@ -915,6 +930,7 @@ export function ScheduleBuilder({
         frequency: formatRecurrence({
           weekdays: draft.weekdays,
           cadence: draft.cadence,
+          biweeklyWeek: draft.biweeklyWeek,
         }),
         duration: formatDurationMinutes(draft.durationMinutes),
         primaryPurpose: draft.primaryPurpose,
@@ -1566,6 +1582,10 @@ export function ScheduleBuilder({
                         setDraft((current) => ({
                           ...current,
                           cadence: event.target.value as MeetingDraft["cadence"],
+                          biweeklyWeek:
+                            event.target.value === "Biweekly"
+                              ? current.biweeklyWeek ?? "Week 1"
+                              : null,
                         }))
                       }
                     >
@@ -1574,6 +1594,29 @@ export function ScheduleBuilder({
                       <option value="Monthly">Monthly</option>
                     </select>
                   </label>
+
+                  {draft.cadence === "Biweekly" ? (
+                    <label className="grid gap-1 text-xs text-muted-foreground">
+                      Biweekly phase
+                      <select
+                        className="h-8 rounded-lg border border-border bg-background/80 px-2 text-sm text-foreground"
+                        value={draft.biweeklyWeek ?? "Unassigned"}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            biweeklyWeek:
+                              event.target.value === "Unassigned"
+                                ? null
+                                : (event.target.value as BiweeklyWeek),
+                          }))
+                        }
+                      >
+                        <option value="Week 1">Week 1</option>
+                        <option value="Week 2">Week 2</option>
+                        <option value="Unassigned">Unassigned</option>
+                      </select>
+                    </label>
+                  ) : null}
 
                   <div className="grid gap-1 text-xs text-muted-foreground">
                     <p>Weekdays</p>

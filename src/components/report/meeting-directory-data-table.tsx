@@ -107,6 +107,7 @@ const columns: ColumnDef<MeetingRecord>[] = [
           </Badge>
           <p className="text-xs text-muted-foreground">
             {meeting.weekdays.length ? meeting.weekdays.join(", ") : "No weekday provided"}
+            {meeting.biweeklyWeek ? ` · ${meeting.biweeklyWeek}` : ""}
           </p>
         </div>
       )
@@ -165,7 +166,7 @@ const columns: ColumnDef<MeetingRecord>[] = [
             {formatMetricMinutes(meeting.weeklyWeightedAttendeeMinutes)}
           </p>
           <p className="text-xs text-muted-foreground">
-            {meeting.durationMinutes} min x {meeting.attendeeCount} x {meeting.cadenceFactor}
+            {formatWeeklyLoadFormula(meeting)}
           </p>
         </div>
       )
@@ -175,6 +176,20 @@ const columns: ColumnDef<MeetingRecord>[] = [
 
 function normalizeFilterValue(value: string) {
   return value.trim().toLowerCase()
+}
+
+function formatWeeklyLoadFormula(meeting: MeetingRecord) {
+  const parts = [
+    `${meeting.durationMinutes} min`,
+    meeting.attendeeCount.toString(),
+    meeting.cadenceFactor.toString(),
+  ]
+
+  if (meeting.weeklyOccurrenceCount > 1) {
+    parts.push(`${meeting.weeklyOccurrenceCount} days`)
+  }
+
+  return parts.join(" x ")
 }
 
 function buildFacetOptions(values: string[]): FacetOption[] {

@@ -1,10 +1,12 @@
 import { WEEKDAYS, type Weekday } from "@/types/report"
 
 export type RecurrenceCadence = "Weekly" | "Biweekly" | "Monthly"
+export type BiweeklyWeek = "Week 1" | "Week 2"
 
 export type RecurrenceModel = {
   weekdays: Weekday[]
   cadence: RecurrenceCadence
+  biweeklyWeek: BiweeklyWeek | null
 }
 
 export function parseRecurrence(frequency: string): RecurrenceModel {
@@ -22,16 +24,26 @@ export function parseRecurrence(frequency: string): RecurrenceModel {
     : parts.includes("Monthly")
       ? "Monthly"
       : "Weekly"
+  const biweeklyWeek: BiweeklyWeek | null = parts.includes("Week 1")
+    ? "Week 1"
+    : parts.includes("Week 2")
+      ? "Week 2"
+      : null
 
   return {
     weekdays,
     cadence,
+    biweeklyWeek,
   }
 }
 
 export function formatRecurrence(model: RecurrenceModel) {
-  const weekdayPart = model.weekdays.join("; ")
-  return weekdayPart ? `${weekdayPart}; ${model.cadence}` : model.cadence
+  const parts: string[] = [...model.weekdays, model.cadence]
+  if (model.cadence === "Biweekly" && model.biweeklyWeek) {
+    parts.push(model.biweeklyWeek)
+  }
+
+  return parts.join("; ")
 }
 
 export function parseDurationMinutes(duration: string) {

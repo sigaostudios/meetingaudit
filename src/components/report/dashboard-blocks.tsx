@@ -545,9 +545,7 @@ function OwnerLoadBlock({
                       <div className="grid gap-0.5 whitespace-normal">
                         <p className="text-foreground">{meeting.time}</p>
                         <p className="text-xs text-muted-foreground">
-                          {meeting.weekdays.length > 0
-                            ? `${meeting.weekdays.join(", ")} | ${meeting.cadence}`
-                            : meeting.cadence}
+                          {formatMeetingSchedule(meeting, " | ")}
                         </p>
                       </div>
                     </TableCell>
@@ -1167,9 +1165,7 @@ function QualityNotesBlock({ widget, data }: ReportBlockProps) {
                     <div className="grid gap-0.5 whitespace-normal">
                       <p className="text-foreground">{meeting.timeBucketLabel}</p>
                       <p className="text-xs text-muted-foreground">
-                        {meeting.weekdays.length > 0
-                          ? `${meeting.weekdays.join(", ")} · ${meeting.cadence}`
-                          : meeting.cadence}
+                        {formatMeetingSchedule(meeting, " · ")}
                       </p>
                     </div>
                   </TableCell>
@@ -1353,15 +1349,18 @@ function getSummaryDrilldownItems(
   content: DashboardContent
 ): SummaryDrilldownItem[] {
   const topClient = data.clientMetrics.find((metric) => metric.client !== "Internal")
+  const highFrequencyMeetings = data.meetings.filter(
+    (meeting) => meeting.weeklyAdjustedOccurrenceCount >= 4
+  )
 
   return [
     {
       key: "highFrequency",
       label: "High-frequency routines",
-      value: `${data.meetings.filter((meeting) => meeting.weekdays.length >= 4).length} meetings`,
+      value: `${highFrequencyMeetings.length} meetings`,
       detail: "Recurring 4-5 days per week",
       definition: content.workloadSummaryDefinitions["High-frequency routines"],
-      meetings: data.meetings.filter((meeting) => meeting.weekdays.length >= 4),
+      meetings: highFrequencyMeetings,
     },
     {
       key: "meetingsWithNotes",
@@ -1515,6 +1514,16 @@ function formatWeeklyCost(minutes: number) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format((minutes / 60) * 100)
+}
+
+function formatMeetingSchedule(meeting: MeetingRecord, separator: string) {
+  const cadenceLabel = meeting.biweeklyWeek
+    ? `${meeting.cadence} ${meeting.biweeklyWeek}`
+    : meeting.cadence
+
+  return meeting.weekdays.length > 0
+    ? `${meeting.weekdays.join(", ")}${separator}${cadenceLabel}`
+    : cadenceLabel
 }
 
 function getPersonAvatarUrl(name: string) {

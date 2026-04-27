@@ -26,6 +26,7 @@ export const TIME_BUCKETS = [
 export type TimeBucketLabel = (typeof TIME_BUCKETS)[number]
 
 export type Cadence = "Weekly" | "Biweekly" | "Monthly" | "Unspecified"
+export type BiweeklyWeek = "Week 1" | "Week 2"
 
 export interface CsvMeetingRow {
   submission_date: string
@@ -46,6 +47,7 @@ export interface MeetingRecord extends CsvMeetingRow {
   attendeeCount: number
   weekdays: Weekday[]
   cadence: Cadence
+  biweeklyWeek: BiweeklyWeek | null
   cadenceFactor: number
   durationMinutes: number
   approximateDuration: boolean
@@ -56,6 +58,7 @@ export interface MeetingRecord extends CsvMeetingRow {
   clientLabel: string
   isInternal: boolean
   weeklyOccurrenceCount: number
+  weeklyAdjustedOccurrenceCount: number
   weeklyWeightedMinutes: number
   weeklyWeightedAttendeeMinutes: number
   perOccurrenceWeightedAttendeeMinutes: number
