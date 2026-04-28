@@ -16,6 +16,8 @@ import {
   ArrowUpIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  UserRoundIcon,
+  UsersIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +28,20 @@ import {
   type FacetOption,
 } from "@/components/ui/facet-filter"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -39,10 +55,10 @@ import { formatMetricMinutes } from "@/lib/reporting"
 import type { MeetingRecord } from "@/types/report"
 
 const pageSizes = [10, 25, 50] as const
+const ALL_OWNERS_VALUE = "__all_owners__"
 
 type SearchFilters = {
   meeting: string
-  person: string
   notes: string
 }
 
@@ -57,7 +73,7 @@ const columns: ColumnDef<MeetingRecord>[] = [
   {
     accessorKey: "meeting_name",
     header: ({ column }) => (
-      <SortHeader column={column} title="Meeting" className="w-[18%] min-w-[14rem]" />
+      <SortHeader column={column} title="Meeting" className="w-[16%] min-w-[13rem]" />
     ),
     cell: ({ row }) => {
       const meeting = row.original
@@ -66,7 +82,7 @@ const columns: ColumnDef<MeetingRecord>[] = [
         <div className="grid gap-1 whitespace-normal">
           <p className="font-medium text-foreground">{meeting.meeting_name}</p>
           <p className="text-xs text-muted-foreground">
-            {meeting.time} / {meeting.timeBucketLabel} / {meeting.attendeeCount} attendees
+            {meeting.time} / {meeting.timeBucketLabel}
           </p>
         </div>
       )
@@ -75,14 +91,22 @@ const columns: ColumnDef<MeetingRecord>[] = [
   {
     accessorKey: "owner_name",
     header: ({ column }) => (
-      <SortHeader column={column} title="Person" className="w-[11rem]" />
+      <SortHeader column={column} title="Owner" className="w-[10rem]" />
     ),
     cell: ({ row }) => <span className="whitespace-normal">{row.original.owner_name}</span>,
   },
   {
+    id: "attendees",
+    accessorFn: (row) => row.attendeeCount,
+    header: ({ column }) => (
+      <SortHeader column={column} title="Attendees" className="w-[8rem]" />
+    ),
+    cell: ({ row }) => <AttendeesCell meeting={row.original} />,
+  },
+  {
     accessorKey: "primary_purpose",
     header: ({ column }) => (
-      <SortHeader column={column} title="Purpose" className="w-[16%] min-w-[12rem]" />
+      <SortHeader column={column} title="Purpose" className="w-[15%] min-w-[12rem]" />
     ),
     cell: ({ row }) => (
       <div className="max-w-[15rem] whitespace-normal">
@@ -95,7 +119,7 @@ const columns: ColumnDef<MeetingRecord>[] = [
   {
     accessorKey: "cadence",
     header: ({ column }) => (
-      <SortHeader column={column} title="Cadence" className="w-[16%] min-w-[12rem]" />
+      <SortHeader column={column} title="Cadence" className="w-[14%] min-w-[11rem]" />
     ),
     cell: ({ row }) => {
       const meeting = row.original
@@ -132,7 +156,7 @@ const columns: ColumnDef<MeetingRecord>[] = [
     id: "notes",
     accessorFn: (row) => row.dataNotes.join(" "),
     header: ({ column }) => (
-      <SortHeader column={column} title="Notes" className="w-[24%] min-w-[18rem]" />
+      <SortHeader column={column} title="Notes" className="w-[22%] min-w-[18rem]" />
     ),
     cell: ({ row }) => {
       const notes = row.original.dataNotes
@@ -176,6 +200,23 @@ const columns: ColumnDef<MeetingRecord>[] = [
 
 function normalizeFilterValue(value: string) {
   return value.trim().toLowerCase()
+}
+
+function getAttendeeFilterValues(meeting: MeetingRecord) {
+  return [
+    ...new Set(
+      meeting.attendeeList.map((attendee) => normalizeFilterValue(attendee)).filter(Boolean)
+    ),
+  ]
+}
+
+function meetingIncludesSelectedPerson(meeting: MeetingRecord, selectedPeople: string[]) {
+  if (!selectedPeople.length) {
+    return true
+  }
+
+  const attendeeValues = new Set(getAttendeeFilterValues(meeting))
+  return selectedPeople.some((person) => attendeeValues.has(person))
 }
 
 function formatWeeklyLoadFormula(meeting: MeetingRecord) {
@@ -224,9 +265,9 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
   ])
   const [searchFilters, setSearchFilters] = React.useState<SearchFilters>({
     meeting: "",
-    person: "",
     notes: "",
   })
+  const [ownerFilter, setOwnerFilter] = React.useState(ALL_OWNERS_VALUE)
   const [facetFilters, setFacetFilters] = React.useState<FacetFilters>({
     person: [],
     client: [],
@@ -234,8 +275,12 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
     cadence: [],
   })
 
-  const personOptions = React.useMemo(
+  const ownerOptions = React.useMemo(
     () => buildFacetOptions(meetings.map((meeting) => meeting.owner_name)),
+    [meetings]
+  )
+  const personOptions = React.useMemo(
+    () => buildFacetOptions(meetings.flatMap((meeting) => meeting.attendeeList)),
     [meetings]
   )
   const clientOptions = React.useMemo(
@@ -263,8 +308,10 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
         return false
       }
 
-      const personQuery = searchFilters.person.trim().toLowerCase()
-      if (personQuery && !meeting.owner_name.toLowerCase().includes(personQuery)) {
+      if (
+        ownerFilter !== ALL_OWNERS_VALUE &&
+        normalizeFilterValue(meeting.owner_name) !== ownerFilter
+      ) {
         return false
       }
 
@@ -279,7 +326,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
       if (
         omittedFacet !== "person" &&
         facetFilters.person.length > 0 &&
-        !facetFilters.person.includes(normalizeFilterValue(meeting.owner_name))
+        !meetingIncludesSelectedPerson(meeting, facetFilters.person)
       ) {
         return false
       }
@@ -310,7 +357,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
 
       return true
     },
-    [facetFilters, searchFilters]
+    [facetFilters, ownerFilter, searchFilters]
   )
 
   const filteredMeetings = React.useMemo(
@@ -327,20 +374,24 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
           continue
         }
 
-        const value =
+        const values =
           facet === "person"
-            ? normalizeFilterValue(meeting.owner_name)
-            : facet === "client"
-              ? normalizeFilterValue(meeting.clientLabel)
-              : facet === "purpose"
-                ? normalizeFilterValue(meeting.primary_purpose)
-                : normalizeFilterValue(meeting.cadence)
+            ? getAttendeeFilterValues(meeting)
+            : [
+                facet === "client"
+                  ? normalizeFilterValue(meeting.clientLabel)
+                  : facet === "purpose"
+                    ? normalizeFilterValue(meeting.primary_purpose)
+                    : normalizeFilterValue(meeting.cadence),
+              ]
 
-        if (!value) {
-          continue
+        for (const value of values) {
+          if (!value) {
+            continue
+          }
+
+          counts.set(value, (counts.get(value) ?? 0) + 1)
         }
-
-        counts.set(value, (counts.get(value) ?? 0) + 1)
       }
 
       return counts
@@ -361,16 +412,16 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
     facetFilters.cadence.length > 0
   const hasSearchFilters =
     searchFilters.meeting.trim().length > 0 ||
-    searchFilters.person.trim().length > 0 ||
     searchFilters.notes.trim().length > 0
-  const hasAnyFilters = hasActiveFacetFilters || hasSearchFilters
+  const hasOwnerFilter = ownerFilter !== ALL_OWNERS_VALUE
+  const hasAnyFilters = hasActiveFacetFilters || hasSearchFilters || hasOwnerFilter
 
   const clearFilters = () => {
     setSearchFilters({
       meeting: "",
-      person: "",
       notes: "",
     })
+    setOwnerFilter(ALL_OWNERS_VALUE)
     setFacetFilters({
       person: [],
       client: [],
@@ -420,12 +471,10 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
             }
             placeholder="Search meeting..."
           />
-          <DirectorySearchField
-            value={searchFilters.person}
-            onChange={(value) =>
-              setSearchFilters((current) => ({ ...current, person: value }))
-            }
-            placeholder="Search person..."
+          <DirectoryOwnerSelect
+            value={ownerFilter}
+            options={ownerOptions}
+            onValueChange={setOwnerFilter}
           />
           <DirectorySearchField
             value={searchFilters.notes}
@@ -544,7 +593,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
       </div>
 
       <div className="overflow-hidden rounded-[1rem] border border-border/70 bg-background/15">
-        <Table className="min-w-[1160px] table-fixed [&_td]:align-top">
+        <Table className="min-w-[1280px] table-fixed [&_td]:align-top">
           <TableHeader className="bg-background/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -570,6 +619,7 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
                       key={cell.id}
                       className={cn(
                         "py-3.5 overflow-hidden",
+                        cell.column.id === "attendees" && "w-[8rem]",
                         cell.column.id === "notes" && "max-w-0",
                         cell.column.id === "weeklyWeightedAttendeeMinutes" && "w-[9rem]"
                       )}
@@ -641,6 +691,96 @@ export function MeetingDirectoryDataTable({ meetings }: { meetings: MeetingRecor
         </div>
       </div>
     </div>
+  )
+}
+
+function AttendeesCell({ meeting }: { meeting: MeetingRecord }) {
+  const attendeeLabel =
+    meeting.attendeeCount === 1 ? "1 attendee" : `${meeting.attendeeCount} attendees`
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-lg border-border/70 bg-background/80 px-2.5 font-mono tabular-nums shadow-none"
+            aria-label={`View ${attendeeLabel} for ${meeting.meeting_name}`}
+          >
+            <UsersIcon className="size-3.5 text-muted-foreground" />
+            <span>{meeting.attendeeCount}</span>
+          </Button>
+        }
+      />
+      <PopoverContent align="start" className="w-80 rounded-xl">
+        <PopoverHeader>
+          <PopoverTitle className="text-sm">{attendeeLabel}</PopoverTitle>
+          <PopoverDescription className="text-xs">
+            {meeting.meeting_name}
+          </PopoverDescription>
+        </PopoverHeader>
+        {meeting.attendeeList.length ? (
+          <div className="grid max-h-72 gap-1 overflow-y-auto pr-1">
+            {meeting.attendeeList.map((attendee, index) => (
+              <div
+                key={`${meeting.meeting_name}-${attendee}-${index}`}
+                className="rounded-lg border border-border/60 bg-background/60 px-2.5 py-1.5 text-sm text-foreground"
+              >
+                {attendee}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No attendees listed.</p>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function DirectoryOwnerSelect({
+  value,
+  options,
+  onValueChange,
+}: {
+  value: string
+  options: FacetOption[]
+  onValueChange: (value: string) => void
+}) {
+  const selectedLabel =
+    value === ALL_OWNERS_VALUE
+      ? "All owners"
+      : options.find((option) => option.value === value)?.label ?? "All owners"
+
+  return (
+    <Select
+      value={value}
+      onValueChange={(nextValue) => {
+        if (nextValue) {
+          onValueChange(nextValue)
+        }
+      }}
+    >
+      <SelectTrigger
+        aria-label="Filter by owner"
+        className="h-9 min-w-[13rem] rounded-lg border-border/70 bg-background/90 px-3 shadow-none sm:w-[14rem]"
+      >
+        <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <UserRoundIcon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{selectedLabel}</span>
+        </span>
+      </SelectTrigger>
+      <SelectContent align="start" className="max-h-80 rounded-xl">
+        <SelectItem value={ALL_OWNERS_VALUE}>All owners</SelectItem>
+        {options.map((option) => (
+          <SelectItem key={`owner-${option.value}`} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
